@@ -5,11 +5,12 @@
   
   The circuit:
   * LCD RS pin to digital pin 2
+  * LCD R/W pin to digital pin 3
   * LCD Enable pin to digital pin 4
-  * LCD D4 pin to digital pin 6
-  * LCD D5 pin to digital pin 7
-  * LCD D6 pin to digital pin 8
-  * LCD D7 pin to digital pin 9
+  * LCD D4 pin to digital pin 5
+  * LCD D5 pin to digital pin 6
+  * LCD D6 pin to digital pin 7
+  * LCD D7 pin to digital pin 8
   * 10K resistor:
   * ends to +5V and ground
   * wiper to LCD VO pin (pin 3)
@@ -36,12 +37,12 @@
 #define SPECIAL_COMMAND 254 // 0xFE
 #define BAUD_COMMAND 129  // 0x81
 
-int BLPin = 9;
+char BLPin = 9;
 char inKey;
-int Cursor = 0;
-int LCDOnOff = 1;
-int blinky = 0;
-int underline = 0;
+char Cursor = 0;
+char LCDOnOff = 1;
+char blinky = 0;
+char underline = 0;
 int splashScreenEnable = 1;
 
 // initialize the library with the numbers of the interface pins
@@ -60,7 +61,7 @@ void setup(){
   
   // Do splashscreen if set
   splashScreenEnable = EEPROM.read(SPLASH_SCREEN_ADDRESS);
-  if (splashScreenEnable>0)
+  if (splashScreenEnable!=0)
   {
     lcd.print("www.SparkFun.com");
     lcd.setCursor(0, 1);
@@ -68,7 +69,6 @@ void setup(){
     delay(2000);
     lcd.clear();
   }
-  
 }
 
 void loop()
@@ -79,7 +79,7 @@ void loop()
       if ((inKey&0xFF) == SPECIAL_COMMAND)
         SpecialCommands();
       // Backlight control
-      else if ((inKey&0xFF)==BACKLIGHT_COMMAND)
+      else if ((inKey&0xFF) == BACKLIGHT_COMMAND)
       {
         // Wait for the next character
         while(Serial.available() == 0)
@@ -87,7 +87,7 @@ void loop()
         setBacklight(Serial.read());
       }
       // baud rate control
-      else if ((inKey&0xFF)==BAUD_COMMAND)
+      else if ((inKey&0xFF) == BAUD_COMMAND)
       {
         // Wait for the next character
         while(Serial.available() == 0)
@@ -116,6 +116,7 @@ void loop()
       // carriage return
       else if (inKey == 13)
         Cursor += 16;
+      // finally, just display the character
       else
         LCDDisplay(inKey);
     }
@@ -196,7 +197,11 @@ void SpecialCommands()
   }
   else if (inKey == 30)
   {
-    EEPROM.write(SPLASH_SCREEN_ADDRESS, (splashScreenEnable^0xFF));
+    if (splashScreenEnable)
+      splashScreenEnable = 0;
+    else
+      splashScreenEnable = 1;
+    EEPROM.write(SPLASH_SCREEN_ADDRESS, splashScreenEnable);
   }
 }
 
@@ -224,6 +229,7 @@ void setBacklight(uint8_t backlightSetting)
   analogWrite(BLPin, backlightSetting);
   EEPROM.write(LCD_BACKLIGHT_ADDRESS, backlightSetting);
 }
+
 void setBaudRate(uint8_t baudSetting)
 {
   // If EEPROM is unwritten (0xFF), set it to 9600 by default
